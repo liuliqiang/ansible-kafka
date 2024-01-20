@@ -1,20 +1,20 @@
-- name: create zookeeper group 
+- name: create zookeeper group
   group: name=zookeeper state=present
-  tags: 
-    - zookeeper 
+  tags:
+    - zookeeper
     - zk_setup
- 
+
 - name: create zookeeper user
   user: name=zookeeper group=zookeeper
-  tags: 
-    - zookeeper 
+  tags:
+    - zookeeper
     - zk_setup
-  
+
 - set_fact:
-    zk_package_name: zookeeper-{{ zookeeper.version }}.tar.gz
-    zk_application_path: "{{ zookeeper.installation_path }}/zookeeper-{{ zookeeper.version }}"
-  tags: 
-    - zookeeper 
+    zk_package_name: apache-zookeeper-{{ zookeeper.version }}-bin.tar.gz
+    zk_application_path: "{{ zookeeper.installation_path }}/apache-zookeeper-{{ zookeeper.version }}-bin"
+  tags:
+    - zookeeper
     - zk_installation
 
 - name: check zookeeper package
@@ -25,33 +25,58 @@
     - zk_installation
 
 - name: download zookeeper tar if not downloaded
-  get_url: url={{ zookeeper.download_mirror }}/zookeeper-{{ zookeeper.version }}/{{ zk_package_name }} dest={{ package_download_path }}
-  when: not zk_package_exists.stat.exists 
-  tags: 
+  get_url:
+    url: "{{ zookeeper.download_mirror }}/zookeeper-{{ zookeeper.version }}/{{ zk_package_name }}"
+    dest: "{{ package_download_path }}"
+  when: not zk_package_exists.stat.exists
+  tags:
     - zookeeper
     - zk_installation
 
 - name: unarchive zookeeper package
-  unarchive: src={{ package_download_path }}/{{ zk_package_name }} dest={{ zookeeper.installation_path }} copy=no 
-  tags: 
+  unarchive:
+    src: "{{ package_download_path }}/{{ zk_package_name }}"
+    dest: "{{ zookeeper.installation_path }}"
+    copy: no
+  tags:
     - zookeeper
     - zk_installation
 
 - name: delete package downloaded if needed
-  file: path={{ package_download_path }}/{{ zk_package_name }} state=absent
+  file:
+    path: "{{ package_download_path }}/{{ zk_package_name }}"
+    state: "absent"
   when: force_cleanup is defined and force_cleanup == "True"
   tags:
     - zookeeper
     - zk_installation
 
 - name: set zookeeper data dir
-  file: path={{ zookeeper.configuration.data_dir }} state=directory owner=zookeeper group=zookeeper
-  tags: 
+  file:
+    path: "{{ zookeeper.configuration.data_dir }}"
+    state: "directory"
+    owner: "zookeeper"
+    group: "zookeeper"
+  tags:
     - zookeeper
     - zk_configuration
 
 - name: set zookeeper log dir
-  file: path={{ zookeeper.configuration.log_path }} state=directory owner=zookeeper group=zookeeper
+  file:
+    path: "{{ zookeeper.configuration.log_path }}"
+    state: "directory"
+    owner: "zookeeper"
+    group: "zookeeper"
+  tags:
+    - zookeeper
+    - zk_configuration
+
+- name: set zookeeper application dir
+  file:
+    path: "{{ zk_application_path }}/conf"
+    state: "directory"
+    owner: "zookeeper"
+    group: "zookeeper"
   tags:
     - zookeeper
     - zk_configuration
@@ -59,30 +84,43 @@
 - name: set zookeeper configuration
   template: src=templates/zookeeper.configuration.j2 dest={{ zk_application_path }}/conf/zoo.cfg force=yes
   notify: restart zookeeper
-  tags: 
+  tags:
     - zookeeper
     - zk_configuration
 
 - name: set zookeeper data dir
-  file: path={{ zookeeper.configuration.data_dir }} state=directory owner=zookeeper group=zookeeper
-  tags: 
+  file:
+    path: "{{ zookeeper.configuration.data_dir }}"
+    state: "directory"
+    owner: "zookeeper"
+    group: "zookeeper"
+  tags:
     - zookeeper
     - zk_configuration
 
 - name: set zookeeper myid configuration
-  template: src=templates/zookeeper.myid.j2 dest={{ zookeeper.configuration.data_dir }}/myid force=yes
+  template:
+    src: "templates/zookeeper.myid.j2"
+    dest: "{{ zookeeper.configuration.data_dir }}/myid"
+    force: yes
   notify: restart zookeeper
-  tags: 
+  tags:
     - zookeeper
     - zk_configuration
 
 - name: start zookeeper
-  template: src=zookeeper.systemd.j2 dest=/etc/systemd/system/zookeeper.service owner=root group=root mode=644 force=yes
+  template:
+    src: "zookeeper.systemd.j2"
+    dest: "/etc/systemd/system/zookeeper.service"
+    owner: "root"
+    group: "root"
+    mode: 644
+    force: yes
   tags:
     - zookeeper
     - zk_startup
 
-- name: reload systemd daemon 
+- name: reload systemd daemon
   shell: "systemctl daemon-reload"
   notify: restart zookeeper
   tags:

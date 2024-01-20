@@ -1,45 +1,20 @@
-- set_fact:
-    jdk_package_name: jdk-{{ java.version }}-{{ java.platform }}.rpm
-  tags: 
-    - java 
-    - java_installation
-
-- name: check java package
-  stat: path={{ package_download_path }}/{{ jdk_package_name }}
-  register: jdk_package_exists
+---
+- name: Install Java package (Ubuntu/Debian)
+  apt:
+    name: "{{ java.apt_package }}"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
   tags:
-    - java 
+    - java
     - java_installation
 
-- name: download jdk package if not downloaded
-  get_url: url={{ java.download_mirror }}/{{ java.version }}-{{ java.build }}/{{ jdk_package_name }} dest={{ package_download_path }} headers={{ java.download_cookies }}
-  when: not jdk_package_exists.stat.exists 
-  tags: 
-    - java 
-    - java_installation
-
-- name: install jdk rpm
-  yum: name={{ package_download_path }}/{{ jdk_package_name }} state=installed
-  tags: 
-    - java 
-    - java_installation
-
-- name: delete package downloaded if needed
-  file: path={{ package_download_path }}/{{ jdk_package_name }} state=absent
-  when: force_cleanup is defined and force_cleanup == "True"
+- name: Install Java package (CentOS/RHEL)
+  yum:
+    name: "{{ java.yum_package }}"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'RedHat'
   tags:
-    - java 
-    - java_installation
-
-- name: symlink to /usr/local
-  file: state=link src={{ java.installation_path }} dest=/usr/bin/java owner=root group=root
-  tags: 
-    - java 
-    - java_installation
-
-- name: make java system alternative
-  # priority parameter its supported in Ansible > 2.2
-  alternatives: name=java path={{ java.installation_path }}/bin/java link=/usr/bin/java
-  tags: 
-    - java 
+    - java
     - java_installation
